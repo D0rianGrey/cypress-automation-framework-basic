@@ -54,11 +54,31 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
       - name: Download test report artifact
         uses: actions/download-artifact@v4
         with:
           name: cypress-reports
           path: cypress/reports
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 22
+
+      - name: Install report generator
+        run: npm install mochawesome-report-generator
+
+      - name: Generate HTML report
+        run: |
+          if [ -f cypress/reports/mochawesome.json ]; then
+            npx marge cypress/reports/mochawesome.json -f report -o cypress/reports/html
+          else
+            mkdir -p cypress/reports/html
+            echo "<html><body><h1>No test reports available</h1></body></html>" > cypress/reports/html/index.html
+          fi
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
