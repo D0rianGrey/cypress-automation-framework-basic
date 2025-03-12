@@ -10,6 +10,7 @@ class ProductsPage extends BasePage {
         this.addToCartButton = button => `[data-test="add-to-cart-${button}"]`;
         this.shoppingCartBadge = '.shopping_cart_badge';
         this.shoppingCartLink = '.shopping_cart_link';
+
     }
 
     isLoaded() {
