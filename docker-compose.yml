@@ -1,0 +1,8 @@
+version: '3'
+services:
+  cypress:
+    build: .
+    volumes:
+      - ./cypress/reports:/app/cypress/reports
+      - ./cypress/screenshots:/app/cypress/screenshots
+      - ./cypress/videos:/app/cypress/videos
