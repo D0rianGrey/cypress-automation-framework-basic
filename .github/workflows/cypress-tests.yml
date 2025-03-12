@@ -9,8 +9,8 @@ on:
 
 permissions:
   contents: read
-  pages: write      # Required for GitHub Pages deployment
-  id-token: write   # Required for GitHub Pages deployment
+  pages: write
+  id-token: write
 
 jobs:
   cypress-run:
@@ -23,16 +23,22 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 22
+          cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
 
       - name: Setup reports directory
-        run: mkdir -p cypress/reports
+        run: |
+          mkdir -p cypress/reports/mocha
+          mkdir -p cypress/reports/html
 
       - name: Run Cypress tests
         run: npm run test:with-report
         continue-on-error: true
+        env:
+          CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY || '' }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload test reports
         if: always()
@@ -68,17 +74,85 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 22
+          cache: 'npm'
 
       - name: Install report generator
         run: npm install mochawesome-report-generator
 
-      - name: Generate HTML report
+      - name: Generate HTML report with metadata
         run: |
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          REPORT_TITLE="Отчет тестирования SauceDemo"
+          BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+          RUN_ID=${{ github.run_id }}
+          
           if [ -f cypress/reports/mochawesome.json ]; then
-            npx marge cypress/reports/mochawesome.json -f report -o cypress/reports/html
+            # Генерация отчета с Mochawesome
+            npx marge cypress/reports/mochawesome.json -f "report_${TIMESTAMP}" -o cypress/reports/html --reportTitle "${REPORT_TITLE}"
+          
+            # Создание индексной страницы с метаданными
+            cat > cypress/reports/html/index.html << EOF
+          <!DOCTYPE html>
+          <html lang="ru">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>${REPORT_TITLE}</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 0; padding: 20px; line-height: 1.6; }
+              .container { max-width: 1000px; margin: 0 auto; }
+              h1 { color: #333; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+              .report-info { background: #f5f5f5; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+              .report-link { display: inline-block; margin-top: 10px; background: #4CAF50; color: white; padding: 10px 15px; text-decoration: none; border-radius: 4px; }
+              .report-link:hover { background: #45a049; }
+              .metadata { margin-top: 20px; font-size: 0.9em; color: #666; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h1>${REPORT_TITLE}</h1>
+          
+              <div class="report-info">
+                <h2>Последний отчет</h2>
+                <p>Дата создания: $(date)</p>
+                <p>Ветка: ${BRANCH_NAME}</p>
+                <p>ID запуска: ${RUN_ID}</p>
+                <a class="report-link" href="report_${TIMESTAMP}.html">Открыть полный отчет</a>
+              </div>
+          
+              <div class="metadata">
+                <p>Этот отчет был автоматически сгенерирован GitHub Actions.</p>
+                <p>Репозиторий: <a href="https://github.com/${{ github.repository }}">${{ github.repository }}</a></p>
+              </div>
+            </div>
+          </body>
+          </html>
+          EOF
           else
+            # Создание страницы с сообщением об отсутствии отчетов
             mkdir -p cypress/reports/html
-            echo "<html><body><h1>No test reports available</h1></body></html>" > cypress/reports/html/index.html
+            cat > cypress/reports/html/index.html << EOF
+          <!DOCTYPE html>
+          <html lang="ru">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Отчеты тестирования отсутствуют</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 0; padding: 20px; line-height: 1.6; }
+              .container { max-width: 800px; margin: 0 auto; text-align: center; padding-top: 50px; }
+              h1 { color: #d9534f; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h1>Отчеты тестирования отсутствуют</h1>
+              <p>Возможно, тесты не были запущены или произошла ошибка при генерации отчетов.</p>
+              <p>Проверьте логи выполнения в <a href="https://github.com/${{ github.repository }}/actions/runs/${RUN_ID}">GitHub Actions</a>.</p>
+            </div>
+          </body>
+          </html>
+          EOF
           fi
 
       - name: Setup Pages

@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "cypress run --reporter mochawesome --reporter-options reportDir=cypress/reports,overwrite=false,html=false,json=true",
-    "clean:reports": "rm -rf cypress/reports/* || true",
-    "merge:reports": "[ -n \"$(find cypress/reports -name '*.json' 2>/dev/null)\" ] && mochawesome-merge cypress/reports/*.json > cypress/reports/mochawesome.json || echo 'No report files found'",
-    "generate:report": "[ -f cypress/reports/mochawesome.json ] && marge cypress/reports/mochawesome.json -f report -o cypress/reports/html || echo 'No mochawesome.json found'",
+    "test": "cypress run",
+    "clean:reports": "rm -rf cypress/reports/mocha && mkdir -p cypress/reports/mocha",
+    "merge:reports": "npx mochawesome-merge cypress/reports/mocha/*.json > cypress/reports/mochawesome.json || echo 'No report files found or error merging'",
+    "generate:report": "npx marge cypress/reports/mochawesome.json -f report -o cypress/reports/html || echo 'Error generating HTML report'",
     "test:with-report": "npm run clean:reports && npm run test && npm run merge:reports && npm run generate:report"
   },
   "keywords": [],
